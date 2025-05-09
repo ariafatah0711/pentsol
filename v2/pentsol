@@ -48,10 +48,10 @@ command_exists() {
 check_python() {
     if command_exists python3; then
         PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
-        if (( $(echo "$PYTHON_VERSION >= 3.8" | bc -l) )); then
+        if (( $(echo "$PYTHON_VERSION >= 3.10" | bc -l) )); then
             return 0
         else
-            print_error "Python version must be 3.8 or higher"
+            print_error "Python version must be 3.10 or higher"
             return 1
         fi
     else
