@@ -1,0 +1,17 @@
+# py
+__pycache__
+pythonvenv
+venv
+
+# secret
+.env
+# *data_dump*
+*key*
+
+# file
+.~*
+*log*
+/.vscode/
+/.draft/
+
+user_states.json
