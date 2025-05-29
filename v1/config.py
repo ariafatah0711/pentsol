@@ -6,8 +6,10 @@ load_dotenv()
 
 # Bot Configuration
 BOT_TOKEN = os.getenv('BOT_TOKEN')
+# DATA_FILE = '../data/pentest_data.json'
+# EXCEL_FOLDER = '../data/excel'
 DATA_FILE = 'data/pentest_data.json'
-EXCEL_FOLDER = 'data/excel'
+EXCEL_FOLDER = '../v2/data/excel'
 
 # Search Configuration
 SEARCH_ALGORITHMS = {

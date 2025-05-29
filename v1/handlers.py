@@ -8,6 +8,7 @@ import pandas as pd
 from datetime import datetime
 import json
 import os
+import csv
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -238,10 +239,80 @@ def register_handlers():
         except Exception as e:
             bot.reply_to(message, f"❌ Error: {escape_markdown_v2(str(e))}")
 
+    # @bot.message_handler(commands=['create_solusi'])
+    # def handle_create_solusi(message):
+    #     try:
+    #         args = message.text[len('/create_solusi'):].strip().split(',')
+    #         technique_names = [name.strip() for name in args if name.strip()]
+    #         if not technique_names:
+    #             bot.reply_to(
+    #                 message,
+    #                 MESSAGES['errors']['create_solusi_empty'],
+    #                 parse_mode='MarkdownV2'
+    #             )
+    #             return
+
+    #         techniques_dict = {}
+    #         for name in technique_names:
+    #             results = search_engine.search(name)
+    #             if results:
+    #                 tech = results[0]['technique']
+    #                 norm_name = tech['name'].strip().lower()
+    #                 if norm_name not in techniques_dict:
+    #                     techniques_dict[norm_name] = tech
+    #             else:
+    #                 bot.reply_to(
+    #                     message,
+    #                     MESSAGES['errors']['technique_not_found'].format(
+    #                         name=escape_markdown_v2(name)
+    #                     ),
+    #                     parse_mode='MarkdownV2'
+    #                 )
+    #                 return
+
+    #         # Create CSV data
+    #         csv_dict = {}
+    #         max_solutions = 0
+    #         for tech in techniques_dict.values():
+    #             tech_name = tech['name']
+    #             solutions = tech.get('solutions', [])
+    #             if not isinstance(solutions, list):
+    #                 solutions = [str(solutions)]
+    #             csv_dict[tech_name] = solutions
+    #             if len(solutions) > max_solutions:
+    #                 max_solutions = len(solutions)
+    #         columns = ['Technique'] + [f'Solution {i+1}' for i in range(max_solutions)]
+    #         csv_data = []
+    #         for name, solutions in csv_dict.items():
+    #             row = [name] + solutions + ['-'] * (max_solutions - len(solutions))
+    #             csv_data.append(row)
+    #         df = pd.DataFrame(csv_data, columns=columns)
+    #         output = io.StringIO()
+    #         df.to_csv(output, index=False, encoding='utf-8', quoting=csv.QUOTE_ALL)
+    #         output.seek(0)
+    #         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    #         filename = f'solutions_{timestamp}.csv'
+    #         caption = (
+    #             f"✅ Solutions for techniques: {', '.join([escape_markdown_v2(t['name']) for t in techniques_dict.values()])}"
+    #         )
+    #         bot.send_document(
+    #             message.chat.id,
+    #             (filename, output.getvalue().encode('utf-8')),
+    #             caption=caption,
+    #             parse_mode='MarkdownV2'
+    #         )
+    #     except Exception as e:
+    #         bot.reply_to(
+    #             message,
+    #             f"❌ Error: {escape_markdown_v2(str(e))}",
+    #             parse_mode='MarkdownV2'
+    #         )
+
     @bot.message_handler(commands=['create_solusi'])
     def handle_create_solusi(message):
         """Handle /create_solusi command to generate and send solutions in CSV format"""
         try:
+            # Ambil nama teknik dari input user
             args = message.text[len('/create_solusi'):].strip().split(',')
             technique_names = [name.strip() for name in args if name.strip()]
             
@@ -254,10 +325,28 @@ def register_handlers():
                 return
 
             techniques = []
+            seen_names = set()
+
+            # Instead of just results[0], cari nama teknik yang paling cocok
             for name in technique_names:
                 results = search_engine.search(name)
                 if results:
-                    techniques.append(results[0]['technique'])
+                    # Coba cari teknik yang cocok berdasarkan nama
+                    matched_tech = None
+                    for result in results:
+                        tech = result['technique']
+                        if name.strip().lower() in tech['name'].strip().lower():
+                            matched_tech = tech
+                            break
+
+                    # Kalau tidak nemu yang cocok, fallback ke pertama
+                    if not matched_tech:
+                        matched_tech = results[0]['technique']
+
+                    norm_name = matched_tech['name'].strip().lower()
+                    if norm_name not in seen_names:
+                        techniques.append(matched_tech)
+                        seen_names.add(norm_name)
                 else:
                     bot.reply_to(
                         message,
@@ -268,7 +357,7 @@ def register_handlers():
                     )
                     return
 
-            # Create CSV data
+            # Buat data CSV
             csv_dict = {}
             max_solutions = 0
 
@@ -289,18 +378,20 @@ def register_handlers():
 
             df = pd.DataFrame(csv_data, columns=columns)
             output = io.StringIO()
-            df.to_csv(output, index=False, encoding='utf-8')
+            df.to_csv(output, index=False, encoding='utf-8', quoting=csv.QUOTE_ALL)
             output.seek(0)
 
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             filename = f'solutions_{timestamp}.csv'
 
+            caption = (
+                f"✅ Solutions for techniques: {', '.join([escape_markdown_v2(t['name']) for t in techniques])}"
+            )
+
             bot.send_document(
                 message.chat.id,
                 (filename, output.getvalue().encode('utf-8')),
-                caption=(
-                    f"✅ Solutions for techniques: {', '.join([escape_markdown_v2(t['name']) for t in techniques])}"
-                ),
+                caption=caption,
                 parse_mode='MarkdownV2'
             )
 
